@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#000"/>
+  <text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="#ff00cc" font-family="Comic Sans MS, cursive">$</text>
+  <text x="8" y="10" font-size="8" fill="#ffff00">★</text>
+  <text x="24" y="10" font-size="8" fill="#00ffff">★</text>
+</svg>
