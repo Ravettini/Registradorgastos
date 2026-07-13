@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExpenseList } from "../components/ExpenseList";
-import { getMonthRange } from "../lib/formatters";
 import { supabase } from "../lib/supabase";
 import type { Expense, ExpenseCategory } from "../types/expense";
 
@@ -16,13 +15,10 @@ export function ExpensesPage() {
 
     async function loadExpenses() {
       setLoadState("loading");
-      const { start, end } = getMonthRange();
 
       const { data, error } = await supabase
         .from("expenses")
         .select("id, amount, category, created_at")
-        .gte("created_at", start)
-        .lt("created_at", end)
         .order("created_at", { ascending: false });
 
       if (cancelled) return;

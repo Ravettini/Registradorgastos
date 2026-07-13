@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { formatCurrency, formatExpenseDate } from "../lib/formatters";
+import {
+  buildMonthOptions,
+  formatCurrency,
+  formatExpenseDate,
+  formatMonthLabel,
+  getCurrentMonthKey,
+  isDateInMonth,
+} from "../lib/formatters";
 import { supabase } from "../lib/supabase";
 import {
   ALL_CATEGORIES_FILTER,
@@ -14,26 +21,42 @@ interface ExpenseListProps {
 }
 
 type DeleteState = { id: number } | null;
+type ViewMode = "month" | "total";
 
 export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
   const [filter, setFilter] = useState<CategoryFilter>(ALL_CATEGORIES_FILTER);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [deleteTarget, setDeleteTarget] = useState<DeleteState>(null);
   const [deleteStatus, setDeleteStatus] = useState<
     "idle" | "deleting" | "error"
   >("idle");
 
-  const filteredExpenses = useMemo(() => {
-    if (filter === ALL_CATEGORIES_FILTER) return expenses;
-    return expenses.filter((expense) => expense.category === filter);
-  }, [expenses, filter]);
+  const monthOptions = useMemo(() => buildMonthOptions(expenses), [expenses]);
+
+  const visibleExpenses = useMemo(() => {
+    let result = expenses;
+
+    if (viewMode === "month") {
+      result = result.filter((expense) =>
+        isDateInMonth(expense.created_at, selectedMonth),
+      );
+    }
+
+    if (filter !== ALL_CATEGORIES_FILTER) {
+      result = result.filter((expense) => expense.category === filter);
+    }
+
+    return result;
+  }, [expenses, filter, selectedMonth, viewMode]);
 
   const total = useMemo(
     () =>
-      filteredExpenses.reduce(
+      visibleExpenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0,
       ),
-    [filteredExpenses],
+    [visibleExpenses],
   );
 
   async function confirmDelete() {
@@ -60,8 +83,41 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
   return (
     <div className="expense-list">
       <div className="total-card">
-        <p className="total-label">Total gastado</p>
+        <p className="total-label">
+          {viewMode === "total" ? "Total general" : "Total del mes"}
+        </p>
         <p className="total-amount">{formatCurrency(total)}</p>
+      </div>
+
+      <div className="filters">
+        <div className="form-field">
+          <label htmlFor="month-filter">Filtrar por mes</label>
+          <select
+            id="month-filter"
+            value={selectedMonth}
+            disabled={viewMode === "total"}
+            onChange={(event) => {
+              setSelectedMonth(event.target.value);
+              setViewMode("month");
+            }}
+          >
+            {monthOptions.map((monthKey) => (
+              <option key={monthKey} value={monthKey}>
+                {formatMonthLabel(monthKey)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          className={`btn btn-filter-total${viewMode === "total" ? " is-active" : ""}`}
+          onClick={() =>
+            setViewMode((current) => (current === "total" ? "month" : "total"))
+          }
+        >
+          {viewMode === "total" ? "FILTRO POR MES" : "FILTRO POR TOTAL"}
+        </button>
       </div>
 
       <div className="form-field">
@@ -84,11 +140,11 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
         </select>
       </div>
 
-      {filteredExpenses.length === 0 ? (
+      {visibleExpenses.length === 0 ? (
         <p className="empty-message">No hay gastos para mostrar</p>
       ) : (
         <ul className="expense-cards">
-          {filteredExpenses.map((expense) => (
+          {visibleExpenses.map((expense) => (
             <li key={expense.id} className="expense-card">
               <p className="expense-amount">
                 {formatCurrency(Number(expense.amount))}
